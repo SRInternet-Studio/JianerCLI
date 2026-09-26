@@ -16,9 +16,22 @@ class MarketPlugin:
     def from_dict(cls, d):
         return cls(d["id"], d.get("name",d["id"]), d["version"], d.get("description",""), d.get("usage",""), d.get("path",""), d.get("entry",""), d.get("requires",[]), d.get("pipDependencies",[]), d.get("type","package"), d.get("deprecated",False), d["release"], d.get("authors",[]), d.get("homepage"), d.get("tags",[]))
 
+def normalize_index_url(value: str) -> str:
+    """接受 index.json、GitHub 仓库 URL 或 raw URL。"""
+    value = value.rstrip("/")
+    if value.endswith(".json"):
+        return value
+    prefix = "https://github.com/"
+    if value.startswith(prefix):
+        parts = value[len(prefix):].split("/")
+        if len(parts) >= 2:
+            return f"https://raw.githubusercontent.com/{parts[0]}/{parts[1]}/main/index.json"
+    return value + "/index.json"
+
 class Market:
     def __init__(self, url=None):
-        self.url = url or os.getenv("JIANER_MARKET_URL") or DEFAULT_INDEX
+        raw = url or os.getenv("JIANER_MARKET_URL") or DEFAULT_INDEX
+        self.url = normalize_index_url(raw)
         cache = Path(os.getenv("XDG_CACHE_HOME", Path.home()/".cache")) / "jianer-cli" / "index.json"
         self.cache = cache
     def index(self, refresh=False):
